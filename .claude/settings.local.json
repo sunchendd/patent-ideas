@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(file docs/* pptx/*)",
+      "Bash(git push *)",
+      "Bash(timeout 20 git ls-remote origin)",
+      "Bash(echo \"exit=$?\")"
+    ]
+  }
+}
