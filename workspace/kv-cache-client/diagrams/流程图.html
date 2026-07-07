@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1024">
+<title>图3 · 方法流程图 — 客户端持有 KV Cache 的推理方法</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --ink:#202124; --muted:#5f6368; --line:#dadce0;
+    --client-fill:#e8f0fe; --client-stroke:#1a73e8; --client-ink:#174ea6;
+    --server-fill:#e6f4ea; --server-stroke:#188038; --server-ink:#0d652d;
+    --data-fill:#fef7e0;   --data-stroke:#f9ab00;  --data-ink:#b06000;
+    --ext-fill:#f1f3f4;    --ext-stroke:#9aa0a6;   --ext-ink:#3c4043;
+    --arrow:#5f6368;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:32px 40px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;-webkit-font-smoothing:antialiased;}
+  header{max-width:1040px;margin:0 auto 16px;}
+  header h1{font-size:20px;font-weight:600;margin:0 0 4px;letter-spacing:.3px;}
+  header .hint{margin:0;color:var(--muted);font-size:13px;}
+  figure.diagram{max-width:1040px;margin:0 auto;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:24px;box-shadow:0 1px 3px rgba(60,64,67,.08);}
+  figure.diagram svg{width:100%;height:auto;display:block;}
+  .lane{fill:none;stroke-width:1.5;stroke-dasharray:5 4;}
+  .lane.client{stroke:var(--client-stroke);} .lane.server{stroke:var(--server-stroke);}
+  .lanetitle{font-size:14px;font-weight:700;text-anchor:middle;dominant-baseline:middle;}
+  .lanetitle.client{fill:var(--client-ink);} .lanetitle.server{fill:var(--server-ink);}
+  .step rect{stroke-width:1.5;} .step text{font-size:12.5px;text-anchor:middle;dominant-baseline:middle;}
+  .step .tag{font-weight:700;} .step .body{font-size:11px;opacity:.85;}
+  .step.client rect{fill:var(--client-fill);stroke:var(--client-stroke);} .step.client text{fill:var(--client-ink);}
+  .step.server rect{fill:var(--server-fill);stroke:var(--server-stroke);} .step.server text{fill:var(--server-ink);}
+  .step.data rect{fill:var(--data-fill);stroke:var(--data-stroke);} .step.data text{fill:var(--data-ink);}
+  .arrow{fill:none;stroke:var(--arrow);stroke-width:1.7;}
+  .arrow.dashed{stroke-dasharray:6 4;}
+  .edgelabel{font-size:11px;fill:var(--muted);text-anchor:middle;dominant-baseline:middle;}
+  .edgelabel.bg{fill:#ffffff;}
+  /* 判断菱形 */
+  .decision{fill:#fff;stroke:var(--data-stroke);stroke-width:1.5;}
+  .decision text{font-size:12px;fill:var(--data-ink);text-anchor:middle;dominant-baseline:middle;}
+  aside.legend{max-width:1040px;margin:16px auto 0;display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
+  aside.legend span{display:inline-flex;align-items:center;gap:6px;}
+  aside.legend i{width:14px;height:14px;border-radius:3px;border:1.5px solid;display:inline-block;}
+  .lc{background:var(--client-fill);border-color:var(--client-stroke);}
+  .ls{background:var(--server-fill);border-color:var(--server-stroke);}
+</style>
+</head>
+<body>
+<header>
+  <h1>图 3 · 方法流程图 — 权利要求 1 的 S1–S6 主流程与 miss-and-fill 回环</h1>
+  <p class="hint">左泳道为客户端动作，右泳道为服务端动作；菱形为 Decode 阶段的偏差判定，超阈值触发 miss-and-fill 补传回环。</p>
+</header>
+
+<figure class="diagram">
+<svg viewBox="0 0 1040 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="方法流程图">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--arrow)"/></marker>
+  </defs>
+
+  <!-- 泳道 -->
+  <rect class="lane client" x="40" y="50" width="470" height="630" rx="12"/>
+  <text class="lanetitle client" x="275" y="76">客户端</text>
+  <rect class="lane server" x="530" y="50" width="470" height="630" rx="12"/>
+  <text class="lanetitle server" x="765" y="76">服务端</text>
+
+  <!-- S1 服务端：Prefill -->
+  <g class="step server" transform="translate(620,100)"><rect width="260" height="62" rx="8"/>
+    <text class="tag" x="130" y="24">S1 · Prefill</text>
+    <text class="body" x="130" y="44">接收首次请求，完成预填，得到 KV Cache</text></g>
+
+  <!-- S2 跨道：返回 PKB（服务端→客户端） -->
+  <path class="arrow" d="M620,131 L450,131" marker-end="url(#arrow)"/>
+  <rect class="edgelabel bg" x="478" y="106" width="116" height="18" rx="3"/>
+  <text class="edgelabel" x="536" y="116">S2 · 返回 PKB</text>
+
+  <!-- S3 客户端：持久化 -->
+  <g class="step client" transform="translate(190,180)"><rect width="260" height="62" rx="8"/>
+    <text class="tag" x="130" y="24">S3 · 持久化</text>
+    <text class="body" x="130" y="44">PKB + 元数据存入本地 CHK Store</text></g>
+
+  <!-- S4 服务端：释放（与 S3 并行） -->
+  <g class="step server" transform="translate(620,180)"><rect width="260" height="62" rx="8"/>
+    <text class="tag" x="130" y="24">S4 · 释放</text>
+    <text class="body" x="130" y="44">返回后释放显存/内存，不留存副本</text></g>
+
+  <!-- S5 客户端：稀疏选择 + 上传 -->
+  <g class="step client" transform="translate(190,290)"><rect width="260" height="62" rx="8"/>
+    <text class="tag" x="130" y="24">S5 · 稀疏上行</text>
+    <text class="body" x="130" y="44">本地 Indexer 打分选 top-k，差分签名后上传</text></g>
+  <path class="arrow" d="M450,321 L620,321" marker-end="url(#arrow)"/>
+  <text class="edgelabel" x="535" y="311">prompt + 稀疏 KV + delta</text>
+
+  <!-- S6 服务端：校验→解码→注入→Decode -->
+  <g class="step server" transform="translate(620,380)"><rect width="260" height="62" rx="8"/>
+    <text class="tag" x="130" y="24">S6 · 校验/解码/注入</text>
+    <text class="body" x="130" y="44">完整性校验 → 重建张量 → 灌入 KV pool → Decode</text></g>
+  <path class="arrow" d="M750,351 L750,380" marker-end="url(#arrow)"/>
+
+  <!-- 判断菱形：偏差是否超阈值 -->
+  <polygon class="decision" points="750,470 850,520 750,570 650,520"/>
+  <text x="750" y="513">Decode 实际 attention</text>
+  <text x="750" y="531">偏差 &gt; 阈值？</text>
+  <path class="arrow" d="M750,442 L750,470" marker-end="url(#arrow)"/>
+
+  <!-- 否 → 输出响应（反馈模块） -->
+  <path class="arrow" d="M850,520 L900,520 L900,610 L780,610" marker-end="url(#arrow)"/>
+  <text class="edgelabel" x="878" y="510">否</text>
+  <g class="step data" transform="translate(520,580)"><rect width="260" height="60" rx="8"/>
+    <text class="tag" x="130" y="24">输出响应 / KV delta</text>
+    <text class="body" x="130" y="44">反馈模块将新增 KV 增量回传客户端</text></g>
+  <path class="arrow" d="M520,610 L450,610" marker-end="url(#arrow)"/>
+
+  <!-- 是 → miss-and-fill 补传（虚线回环至 S5） -->
+  <path class="arrow dashed" d="M650,520 L470,520 L470,321" marker-end="url(#arrow)"/>
+  <text class="edgelabel" x="560" y="510">是 · miss-and-fill</text>
+  <rect class="edgelabel bg" x="412" y="412" width="116" height="18" rx="3"/>
+  <text class="edgelabel" x="470" y="422">补传缺失 KV 块 → 重算</text>
+</svg>
+</figure>
+
+<aside class="legend">
+  <span><i class="lc"></i>客户端步骤</span>
+  <span><i class="ls"></i>服务端步骤</span>
+  <span>━━ 主流程 / 跨道调用</span>
+  <span>╌╌╌ miss-and-fill 补传回环</span>
+</aside>
+</body>
+</html>

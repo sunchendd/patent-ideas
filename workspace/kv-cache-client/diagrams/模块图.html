@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1024">
+<title>图2 · 模块组成图 — 客户端持有 KV Cache 的 LLM 推理系统</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --ink:#202124; --muted:#5f6368; --line:#dadce0;
+    --client-fill:#e8f0fe; --client-stroke:#1a73e8; --client-ink:#174ea6;
+    --server-fill:#e6f4ea; --server-stroke:#188038; --server-ink:#0d652d;
+    --data-fill:#fef7e0;   --data-stroke:#f9ab00;  --data-ink:#b06000;
+    --ext-fill:#f1f3f4;    --ext-stroke:#9aa0a6;   --ext-ink:#3c4043;
+    --arrow:#5f6368;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:32px 40px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;-webkit-font-smoothing:antialiased;}
+  header{max-width:1040px;margin:0 auto 16px;}
+  header h1{font-size:20px;font-weight:600;margin:0 0 4px;letter-spacing:.3px;}
+  header .hint{margin:0;color:var(--muted);font-size:13px;}
+  figure.diagram{max-width:1040px;margin:0 auto;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:24px;box-shadow:0 1px 3px rgba(60,64,67,.08);}
+  figure.diagram svg{width:100%;height:auto;display:block;}
+  .panel{fill:none;stroke-width:1.5;stroke-dasharray:5 4;}
+  .panel.client{stroke:var(--client-stroke);} .panel.server{stroke:var(--server-stroke);}
+  .paneltitle{font-size:15px;font-weight:700;text-anchor:middle;dominant-baseline:middle;}
+  .paneltitle.client{fill:var(--client-ink);} .paneltitle.server{fill:var(--server-ink);}
+  .mod rect{stroke-width:1.5;} .mod text{font-size:12.5px;text-anchor:middle;dominant-baseline:middle;}
+  .mod .title{font-weight:600;} .mod .sub{font-size:10.5px;opacity:.82;}
+  .mod.client rect{fill:var(--client-fill);stroke:var(--client-stroke);} .mod.client text{fill:var(--client-ink);}
+  .mod.server rect{fill:var(--server-fill);stroke:var(--server-stroke);} .mod.server text{fill:var(--server-ink);}
+  .mod.data rect{fill:var(--data-fill);stroke:var(--data-stroke);} .mod.data text{fill:var(--data-ink);}
+  .arrow{fill:none;stroke:var(--arrow);stroke-width:1.7;}
+  .arrow.dashed{stroke-dasharray:6 4;}
+  .edgelabel{font-size:11px;fill:var(--muted);text-anchor:middle;dominant-baseline:middle;}
+  .pipelabel{font-size:11.5px;font-weight:600;text-anchor:middle;dominant-baseline:middle;}
+  aside.legend{max-width:1040px;margin:16px auto 0;display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
+  aside.legend span{display:inline-flex;align-items:center;gap:6px;}
+  aside.legend i{width:14px;height:14px;border-radius:3px;border:1.5px solid;display:inline-block;}
+  .lc{background:var(--client-fill);border-color:var(--client-stroke);}
+  .ls{background:var(--server-fill);border-color:var(--server-stroke);}
+  .ld{background:var(--data-fill);border-color:var(--data-stroke);}
+</style>
+</head>
+<body>
+<header>
+  <h1>图 2 · 模块组成图 — 各子系统内部模块及处理流水线</h1>
+  <p class="hint">左：客户端"上行准备"流水线（CHK Store → 稀疏选择 → 差分 → 签名 → 传输）。右：服务端"接收注入"流水线（校验 → 解码 → 注入 → Decode），含 miss-and-fill 与 delta 反馈分支。</p>
+</header>
+
+<figure class="diagram">
+<svg viewBox="0 0 1040 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块组成图">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--arrow)"/></marker>
+  </defs>
+
+  <!-- 客户端面板 -->
+  <rect class="panel client" x="30" y="60" width="470" height="540" rx="12"/>
+  <text class="paneltitle client" x="265" y="86">客户端子系统</text>
+
+  <!-- 客户端模块（2列） -->
+  <g class="mod client" transform="translate(54,130)"><rect width="190" height="78" rx="8"/>
+    <text class="title" x="95" y="30">CHK Store</text>
+    <text class="sub" x="95" y="52">PKB + 元数据持久化</text>
+    <text class="sub" x="95" y="66">（model_id / TTL / 哈希）</text></g>
+  <g class="mod client" transform="translate(280,130)"><rect width="190" height="78" rx="8"/>
+    <text class="title" x="95" y="30">Lifecycle Manager</text>
+    <text class="sub" x="95" y="52">状态机驱动</text>
+    <text class="sub" x="95" y="66">FRESH…EVICTED</text></g>
+  <g class="mod client" transform="translate(54,240)"><rect width="190" height="78" rx="8"/>
+    <text class="title" x="95" y="30">Sparse Selector</text>
+    <text class="sub" x="95" y="52">Indexer KV 本地打分</text>
+    <text class="sub" x="95" y="66">选 top-k 压缩块</text></g>
+  <g class="mod client" transform="translate(280,240)"><rect width="190" height="78" rx="8"/>
+    <text class="title" x="95" y="30">Delta Encoder</text>
+    <text class="sub" x="95" y="52">相对上次快照差分</text>
+    <text class="sub" x="95" y="66">分层量化 + 算术编码</text></g>
+  <g class="mod client" transform="translate(54,350)"><rect width="190" height="78" rx="8"/>
+    <text class="title" x="95" y="30">Attestation</text>
+    <text class="sub" x="95" y="52">AEAD 加密</text>
+    <text class="sub" x="95" y="66">HMAC 逐 chunk 签名</text></g>
+  <g class="mod client" transform="translate(280,350)"><rect width="190" height="78" rx="8"/>
+    <text class="title" x="95" y="30">Transport</text>
+    <text class="sub" x="95" y="52">prompt + manifest</text>
+    <text class="sub" x="95" y="66">+ blob 多部分上行</text></g>
+
+  <!-- 客户端内部流水线箭头 -->
+  <path class="arrow" d="M244,279 L280,279" marker-end="url(#arrow)"/>
+  <path class="arrow" d="M375,318 L149,350" marker-end="url(#arrow)"/>
+  <path class="arrow" d="M244,389 L280,389" marker-end="url(#arrow)"/>
+  <!-- Lifecycle 控制 CHK Store（虚线） -->
+  <path class="arrow dashed" d="M375,208 C 320,224 220,224 149,208" marker-end="url(#arrow)"/>
+  <text class="pipelabel" x="265" y="468" style="fill:var(--client-ink)">上行准备流水线：CHK Store → Sparse Selector → Delta Encoder → Attestation → Transport</text>
+
+  <!-- 服务端面板 -->
+  <rect class="panel server" x="540" y="60" width="470" height="540" rx="12"/>
+  <text class="paneltitle server" x="775" y="86">服务端子系统</text>
+
+  <!-- 服务端纵向流水线 -->
+  <g class="mod server" transform="translate(620,130)"><rect width="200" height="68" rx="8"/>
+    <text class="title" x="100" y="28">完整性校验</text>
+    <text class="sub" x="100" y="50">HMAC / 版本兼容性</text></g>
+  <g class="mod server" transform="translate(620,222)"><rect width="200" height="68" rx="8"/>
+    <text class="title" x="100" y="28">PKB 解码</text>
+    <text class="sub" x="100" y="50">反量化 / 张量重建</text></g>
+  <g class="mod server" transform="translate(620,314)"><rect width="200" height="68" rx="8"/>
+    <text class="title" x="100" y="28">KV 注入</text>
+    <text class="sub" x="100" y="50">注入引擎 KV pool</text></g>
+  <g class="mod data" transform="translate(620,406)"><rect width="200" height="68" rx="8"/>
+    <text class="title" x="100" y="28">推理引擎 Decode</text>
+    <text class="sub" x="100" y="50">vLLM / SGLang / TRT-LLM</text></g>
+
+  <!-- 补齐调度（侧） -->
+  <g class="mod server" transform="translate(848,222)"><rect width="140" height="68" rx="8"/>
+    <text class="title" x="70" y="28">补齐调度</text>
+    <text class="sub" x="70" y="50">Miss-and-Fill</text></g>
+  <!-- 反馈模块（侧） -->
+  <g class="mod server" transform="translate(848,406)"><rect width="140" height="68" rx="8"/>
+    <text class="title" x="70" y="28">反馈模块</text>
+    <text class="sub" x="70" y="50">新增 KV delta</text></g>
+
+  <!-- 服务端内部箭头 -->
+  <path class="arrow" d="M720,198 L720,222" marker-end="url(#arrow)"/>
+  <path class="arrow" d="M720,290 L720,314" marker-end="url(#arrow)"/>
+  <path class="arrow" d="M720,382 L720,406" marker-end="url(#arrow)"/>
+  <!-- Decode → 补齐调度（偏差检测，虚线） -->
+  <path class="arrow dashed" d="M820,440 L848,290" marker-end="url(#arrow)"/>
+  <text class="edgelabel" x="862" y="360">偏差检测</text>
+  <!-- Decode → 反馈 -->
+  <path class="arrow" d="M820,440 L848,440" marker-end="url(#arrow)"/>
+  <text class="edgelabel" x="834" y="424">delta</text>
+  <text class="pipelabel" x="775" y="528" style="fill:var(--server-ink)">接收注入流水线：校验 → 解码 → 注入 → Decode（偏差 → 补齐；新 KV → 反馈）</text>
+</svg>
+</figure>
+
+<aside class="legend">
+  <span><i class="lc"></i>客户端模块</span>
+  <span><i class="ls"></i>服务端模块</span>
+  <span><i class="ld"></i>推理引擎（外部）</span>
+  <span>━━ 数据/处理流</span>
+  <span>╌╌╌ 控制信号（状态/偏差）</span>
+</aside>
+</body>
+</html>

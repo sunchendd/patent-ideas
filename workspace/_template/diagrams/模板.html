@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1024">
+<title>【图名】— 专利附图模板</title>
+<!--
+  专利附图 HTML 模板（自包含 · 离线可开 · 可截图）
+  ───────────────────────────────────────────────
+  · 复制本文件后改 <title>、<header>、<svg> 三处即可。
+  · 视觉系统集中在 <style> 的 CSS 变量里，改一处即全局生效。
+  · 框/文字用 <g class="mod <角色>"> 绘制；箭头用 <path class="arrow" marker-end>。
+  · 角色：client(客户端蓝) / server(服务端绿) / data(数据黄) / ext(外部灰)。
+-->
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --ink:#202124; --muted:#5f6368; --line:#dadce0;
+    --client-fill:#e8f0fe; --client-stroke:#1a73e8; --client-ink:#174ea6;
+    --server-fill:#e6f4ea; --server-stroke:#188038; --server-ink:#0d652d;
+    --data-fill:#fef7e0;   --data-stroke:#f9ab00;  --data-ink:#b06000;
+    --ext-fill:#f1f3f4;    --ext-stroke:#9aa0a6;   --ext-ink:#3c4043;
+    --arrow:#5f6368;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:32px 40px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  header{max-width:1000px; margin:0 auto 16px;}
+  header h1{font-size:20px; font-weight:600; margin:0 0 4px; letter-spacing:.3px;}
+  header .hint{margin:0; color:var(--muted); font-size:13px;}
+  figure.diagram{
+    max-width:1000px; margin:0 auto; background:var(--card);
+    border:1px solid var(--line); border-radius:10px; padding:24px;
+    box-shadow:0 1px 3px rgba(60,64,67,.08);
+  }
+  figure.diagram svg{width:100%; height:auto; display:block;}
+  .mod rect{stroke-width:1.5;}
+  .mod text{font-size:14px; text-anchor:middle; dominant-baseline:middle;}
+  .mod .title{font-weight:600;}
+  .mod .sub{font-size:11px; opacity:.8;}
+  .mod.client rect{fill:var(--client-fill); stroke:var(--client-stroke);} .mod.client text{fill:var(--client-ink);}
+  .mod.server rect{fill:var(--server-fill); stroke:var(--server-stroke);} .mod.server text{fill:var(--server-ink);}
+  .mod.data   rect{fill:var(--data-fill);   stroke:var(--data-stroke);}  .mod.data text{fill:var(--data-ink);}
+  .mod.ext    rect{fill:var(--ext-fill);    stroke:var(--ext-stroke);}   .mod.ext text{fill:var(--ext-ink);}
+  .arrow{fill:none; stroke:var(--arrow); stroke-width:1.6;}
+  .arrow.dashed{stroke-dasharray:6 4;}
+  .edgelabel{font-size:11px; fill:var(--muted); text-anchor:middle; dominant-baseline:middle;}
+  .edgelabel.bg{fill:#ffffff;}
+  aside.legend{
+    max-width:1000px; margin:16px auto 0; display:flex; gap:18px; flex-wrap:wrap;
+    font-size:12px; color:var(--muted);
+  }
+  aside.legend span{display:inline-flex; align-items:center; gap:6px;}
+  aside.legend i{width:14px; height:14px; border-radius:3px; border:1.5px solid; display:inline-block;}
+  .lc{background:var(--client-fill); border-color:var(--client-stroke);}
+  .ls{background:var(--server-fill); border-color:var(--server-stroke);}
+  .ld{background:var(--data-fill);   border-color:var(--data-stroke);}
+  .le{background:var(--ext-fill);    border-color:var(--ext-stroke);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>【发明名称】— 图 N：模块图</h1>
+  <p class="hint">一句话说明本图表达的内容（例：客户端与服务端子系统的模块组成及数据流向）。</p>
+</header>
+
+<figure class="diagram">
+  <!-- viewBox 按内容设定；框为 220×64，留足箭头间距 -->
+  <svg viewBox="0 0 900 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="模块图">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--arrow)"/>
+      </marker>
+    </defs>
+
+    <!-- 模块组：复制 <g class="mod ..."> 块并改 transform / 文字即可 -->
+    <g class="mod client" transform="translate(60,40)">
+      <rect width="220" height="64" rx="8"/>
+      <text class="title" x="110" y="26">客户端模块A</text>
+      <text class="sub"   x="110" y="46">一句话职责</text>
+    </g>
+
+    <g class="mod server" transform="translate(620,40)">
+      <rect width="220" height="64" rx="8"/>
+      <text class="title" x="110" y="26">服务端模块B</text>
+      <text class="sub"   x="110" y="46">一句话职责</text>
+    </g>
+
+    <g class="mod data" transform="translate(340,220)">
+      <rect width="220" height="64" rx="8"/>
+      <text class="title" x="110" y="26">数据/中间表示</text>
+      <text class="sub"   x="110" y="46">如 PKB / KV Cache</text>
+    </g>
+
+    <!-- 箭头：marker-end 指向终点；.dashed 表示虚线（如下行反馈） -->
+    <path class="arrow" d="M280,72 C 420,72 480,250 340,252" marker-end="url(#arrow)"/>
+    <path class="arrow dashed" d="M620,72 C 520,72 480,250 560,252" marker-end="url(#arrow)"/>
+
+    <!-- 箭头文字标签：先放一个白色底矩形遮住箭头线，再放文字 -->
+    <rect class="edgelabel bg" x="420" y="150" width="60" height="18" rx="3"/>
+    <text class="edgelabel" x="450" y="160">上传</text>
+  </svg>
+</figure>
+
+<aside class="legend">
+  <span><i class="lc"></i>客户端子系统</span>
+  <span><i class="ls"></i>服务端子系统</span>
+  <span><i class="ld"></i>数据 / 中间表示</span>
+  <span><i class="le"></i>外部实体</span>
+  <span>—— 实线=上行/请求 &nbsp; ╌╌=下行/反馈</span>
+</aside>
+
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1024">
+<title>图1 · 系统架构图 — 客户端持有 KV Cache 的 LLM 推理系统</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --ink:#202124; --muted:#5f6368; --line:#dadce0;
+    --client-fill:#e8f0fe; --client-stroke:#1a73e8; --client-ink:#174ea6;
+    --server-fill:#e6f4ea; --server-stroke:#188038; --server-ink:#0d652d;
+    --data-fill:#fef7e0;   --data-stroke:#f9ab00;  --data-ink:#b06000;
+    --ext-fill:#f1f3f4;    --ext-stroke:#9aa0a6;   --ext-ink:#3c4043;
+    --arrow:#5f6368;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:32px 40px;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;-webkit-font-smoothing:antialiased;}
+  header{max-width:1040px;margin:0 auto 16px;}
+  header h1{font-size:20px;font-weight:600;margin:0 0 4px;letter-spacing:.3px;}
+  header .hint{margin:0;color:var(--muted);font-size:13px;}
+  figure.diagram{max-width:1040px;margin:0 auto;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:24px;box-shadow:0 1px 3px rgba(60,64,67,.08);}
+  figure.diagram svg{width:100%;height:auto;display:block;}
+  .panel{fill:none;stroke-width:1.5;stroke-dasharray:5 4;}
+  .panel.client{stroke:var(--client-stroke);}
+  .panel.server{stroke:var(--server-stroke);}
+  .paneltitle{font-size:15px;font-weight:700;text-anchor:middle;dominant-baseline:middle;}
+  .paneltitle.client{fill:var(--client-ink);} .paneltitle.server{fill:var(--server-ink);}
+  .mod rect{stroke-width:1.5;}
+  .mod text{font-size:13px;text-anchor:middle;dominant-baseline:middle;}
+  .mod .title{font-weight:600;} .mod .sub{font-size:10.5px;opacity:.8;}
+  .mod.client rect{fill:var(--client-fill);stroke:var(--client-stroke);} .mod.client text{fill:var(--client-ink);}
+  .mod.server rect{fill:var(--server-fill);stroke:var(--server-stroke);} .mod.server text{fill:var(--server-ink);}
+  .mod.data rect{fill:var(--data-fill);stroke:var(--data-stroke);} .mod.data text{fill:var(--data-ink);}
+  .arrow{fill:none;stroke:var(--arrow);stroke-width:1.7;}
+  .arrow.dashed{stroke-dasharray:6 4;}
+  .arrow.upload{stroke:#1a73e8;}
+  .edgelabel{font-size:11.5px;fill:var(--muted);text-anchor:middle;dominant-baseline:middle;}
+  .edgelabel.bg{fill:#ffffff;}
+  .note{font-size:11px;fill:var(--server-ink);text-anchor:middle;}
+  aside.legend{max-width:1040px;margin:16px auto 0;display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
+  aside.legend span{display:inline-flex;align-items:center;gap:6px;}
+  aside.legend i{width:14px;height:14px;border-radius:3px;border:1.5px solid;display:inline-block;}
+  .lc{background:var(--client-fill);border-color:var(--client-stroke);}
+  .ls{background:var(--server-fill);border-color:var(--server-stroke);}
+  .ld{background:var(--data-fill);border-color:var(--data-stroke);}
+</style>
+</head>
+<body>
+<header>
+  <h1>图 1 · 系统架构图 — 一种基于客户端持有 KV Cache 的 LLM 推理系统</h1>
+  <p class="hint">客户端子系统持久化持有 PKB（可携带 KV 表示），按需以稀疏/差分方式上行；服务端校验解码后注入推理引擎，请求结束即释放。</p>
+</header>
+
+<figure class="diagram">
+<svg viewBox="0 0 1040 660" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="系统架构图">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--arrow)"/></marker>
+    <marker id="arrowUp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1a73e8"/></marker>
+  </defs>
+
+  <!-- 子系统面板 -->
+  <rect class="panel client" x="40" y="70" width="320" height="560" rx="12"/>
+  <text class="paneltitle client" x="200" y="96">客户端子系统（数据所有者）</text>
+  <rect class="panel server" x="680" y="70" width="320" height="560" rx="12"/>
+  <text class="paneltitle server" x="840" y="96">服务端子系统（推理引擎）</text>
+
+  <!-- 客户端 6 模块 -->
+  <g class="mod client" transform="translate(60,120)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">CHK 存储模块 CHK Store</text>
+    <text class="sub" x="140" y="45">持久化 PKB + 元数据（磁盘/端侧 NPU）</text></g>
+  <g class="mod client" transform="translate(60,200)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">生命周期管理 Lifecycle Manager</text>
+    <text class="sub" x="140" y="45">FRESH→USED→STALE→EVICTABLE→EVICTED</text></g>
+  <g class="mod client" transform="translate(60,280)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">稀疏选择 Sparse Selector</text>
+    <text class="sub" x="140" y="45">本地 Indexer KV 打分，选 top-k 块</text></g>
+  <g class="mod client" transform="translate(60,360)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">差分编码 Delta Encoder</text>
+    <text class="sub" x="140" y="45">相对上次快照做 delta + 压缩</text></g>
+  <g class="mod client" transform="translate(60,440)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">安全签名 Attestation</text>
+    <text class="sub" x="140" y="45">AEAD 加密 + HMAC 完整性签名</text></g>
+  <g class="mod client" transform="translate(60,520)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">传输模块 Transport</text>
+    <text class="sub" x="140" y="45">HTTP/2 · gRPC 多部分上行</text></g>
+
+  <!-- 服务端 5 模块 -->
+  <g class="mod server" transform="translate(700,120)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">完整性校验</text>
+    <text class="sub" x="140" y="45">验签 / HMAC / 兼容性校验</text></g>
+  <g class="mod server" transform="translate(700,210)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">PKB 解码模块</text>
+    <text class="sub" x="140" y="45">反量化 / 反算术编码 / 张量重建</text></g>
+  <g class="mod server" transform="translate(700,300)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">KV 注入模块</text>
+    <text class="sub" x="140" y="45">灌入 vLLM/SGLang/TRT-LLM KV pool</text></g>
+  <g class="mod server" transform="translate(700,390)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">补齐调度 Miss-and-Fill</text>
+    <text class="sub" x="140" y="45">检测 attention 偏差，触发补传</text></g>
+  <g class="mod server" transform="translate(700,480)"><rect width="280" height="62" rx="8"/>
+    <text class="title" x="140" y="25">反馈模块（可选）</text>
+    <text class="sub" x="140" y="45">新增 KV 增量以 delta 返回</text></g>
+  <text class="note" x="840" y="566">请求处理完即释放显存/内存 · 不留存副本（ephemeral）</text>
+
+  <!-- 跨子系统数据流 -->
+  <!-- ① PKB 上行 -->
+  <path class="arrow upload" d="M340,551 C 600,560 760,300 700,151" marker-end="url(#arrowUp)"/>
+  <rect class="edgelabel bg" x="455" y="300" width="206" height="18" rx="3"/>
+  <text class="edgelabel" x="558" y="310" style="fill:#1a73e8">① PKB 上行：prompt + 稀疏 top-k KV + delta</text>
+
+  <!-- ② 推理响应 / KV delta 下行 -->
+  <path class="arrow" d="M700,511 C 560,520 430,548 340,551" marker-end="url(#arrow)"/>
+  <rect class="edgelabel bg" x="430" y="498" width="150" height="18" rx="3"/>
+  <text class="edgelabel" x="505" y="508">② 推理响应 / 新增 KV delta</text>
+
+  <!-- ③ miss-and-fill 补传请求（虚线） -->
+  <path class="arrow dashed" d="M700,421 C 560,415 430,325 340,311" marker-end="url(#arrow)"/>
+  <rect class="edgelabel bg" x="430" y="356" width="150" height="18" rx="3"/>
+  <text class="edgelabel" x="505" y="366">③ miss-and-fill 补传请求</text>
+</svg>
+</figure>
+
+<aside class="legend">
+  <span><i class="lc"></i>客户端模块</span>
+  <span><i class="ls"></i>服务端模块</span>
+  <span style="color:#1a73e8">━━ 上行（请求 / PKB）</span>
+  <span>━━ 下行（响应 / delta）</span>
+  <span>╌╌╌ 反向控制（补传触发）</span>
+</aside>
+</body>
+</html>
